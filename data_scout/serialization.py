@@ -2,54 +2,46 @@
 
 from __future__ import annotations
 
-import io
+import json
 import pandas as pd
 import numpy as np
 
 from typing import Any
 
 
-def json_safe(value: Any) -> Any:
-    """Convert NumPy and pandas values into JSON-compatible values."""
-
+def to_json_safe(value: Any) -> Any:
+    """Recursively convert a value into a JSON-compatible Python object."""
     if isinstance(value, dict):
-        return {
-            str(key): json_safe(item)
-            for key, item in value.items()
-        }
+        return {str(key): to_json_safe(item) for key, item in value.items()}
 
-    if isinstance(value, (list, tuple)):
-        return [json_safe(item) for item in value]
+    if isinstance(value, (list, tuple, set)):
+        return [to_json_safe(item) for item in value]
 
     if isinstance(value, (pd.Timestamp, pd.Timedelta)):
         return str(value)
 
     if isinstance(value, np.generic):
-        return json_safe(value.item())
+        return value.item()
 
-    if isinstance(value, float) and (
-        np.isnan(value) or np.isinf(value)
-    ):
+    if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
         return None
 
-    if pd.isna(value):
-        return None
+    # pd.isna works for scalar values, but not safely for lists or dictionaries.
+    if not isinstance(value, (list, tuple, dict, set)):
+        try:
+            if pd.isna(value):
+                return None
+        except (TypeError, ValueError):
+            pass
 
     return value
 
-def dataframe_records(frame: pd.DataFrame, max_rows: int=20):
-    """Return a small JSON-safe preview of a DataFrame."""
-    return json_safe(frame.head(max_rows).to_dict(orient='records'))
+def dataframe_preview(dataframe: pd.DataFrame, rows:int=5) -> str:
+    """ Returns a small DataFrame preview as JSON-safe records. """
+    records = dataframe.head(rows).to_dict(orient="records")
+    return to_json_safe(records)
 
-def read_upload_csv(file_bytes: bytes)-> pd.DataFrame:
-    """Read a CSV file with common encoding fallbacks."""
-    last_error: Exception | None = None
 
-    for encoding in ("utf-8", "utf-8-sig", "latin-1"):
-        try:
-            return pd.read_csv(io.BytesIO(file_bytes), encoding=encoding) # Creates in-memory binary files
-        except UnicodeError as exc:
-            last_error = exc
-
-    raise ValueError(f"Failed to read CSV file: {last_error}")
-
+def to_json_text(value: Any) ->str:
+    """ Convert any value into a formatted JSON text. """
+    return json.dumps(to_json_safe(value), ensure_ascii=False, indent=2)
