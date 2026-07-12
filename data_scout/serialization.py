@@ -36,6 +36,7 @@ def to_json_safe(value: Any) -> Any:
 
     return value
 
+
 def dataframe_preview(dataframe: pd.DataFrame, rows:int=5) -> str:
     """ Returns a small DataFrame preview as JSON-safe records. """
     records = dataframe.head(rows).to_dict(orient="records")
