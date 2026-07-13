@@ -66,10 +66,31 @@ def clean_dataframe(
                 f"using {numeric_strategy}."
             )
 
+        # Missing datetime values are intentionally left as NaT. Inventing a date
+        # would usually be more misleading than keeping it missing.
+        datetime_columns = cleaned.select_dtypes(
+            include=["datetime", "datetimetz"]
+        ).columns
+        for column in datetime_columns:
+            remaining = int(cleaned[column].isna().sum())
+            if remaining:
+                actions.append(
+                    f"Left {remaining} missing datetime values in '{column}' unchanged."
+                )
 
-
-
-
+        report = {
+            "shape_before": [int(dataframe.shape[0]), int(dataframe.shape[1])],
+            "shape_after": [int(cleaned.shape[0]), int(cleaned.shape[1])],
+            "missing_before": missing_before,
+            "missing_after": int(cleaned.isna().sum().sum()),
+            "duplicates_before": duplicates_before,
+            "duplicates_after": int(cleaned.duplicated().sum()),
+            "data_types_after": {
+                column: str(dtype) for column, dtype in cleaned.dtypes.items()
+            },
+            "actions": actions,
+        }
+        return cleaned, report
 
 
 def _convert_obvious_data_types(dataframe: pd.DataFrame) -> list[str]:
