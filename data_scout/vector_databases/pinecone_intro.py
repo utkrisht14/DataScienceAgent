@@ -115,3 +115,30 @@ for hit in results["result"]["hits"]:
     print(f"id: {hit['id']:<5} | score: {round(hit['score'], 2):<5} | category: {hit['fields']['category']:<10} | text: {hit['fields']['chunk_text']:<50}")
 
 
+# Re-ranking in Pinecone
+reranked_results = dense_index.search(
+        namespace = "example-namespace",
+        query = {
+            "top_k": 10,
+            "inputs": {
+                "text": query
+            }
+    },
+
+        rerank = {
+            "model" : "bge-reranker-v2-m3",
+            "top_n" : 10,
+            "rank_fields" : ["chunk_text"]
+        }
+    )
+
+
+# Print the re-ranked result
+print("\nRe-ranked results:")
+for hit in reranked_results['result']['hits']:
+    print(
+        f"id: {hit['id']:<5} | score: {round(hit['score'], 2):<5} | category: {hit['fields']['category']:<10} | text: {hit['fields']['chunk_text']:<50}")
+
+
+# Clear the index
+pc.delete_index(index_name)
