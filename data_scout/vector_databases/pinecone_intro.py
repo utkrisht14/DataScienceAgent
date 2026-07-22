@@ -92,3 +92,26 @@ time.sleep(10)
 # View stats from the index
 stats = dense_index.describe_index_stats()
 print(stats)
+
+
+# Semantic search
+query = "Famous historical structures and monuments"
+
+# Search the dense index
+results = dense_index.search(
+    namespace="example-namespace",
+    query = {
+        "top_k": 10,
+        "inputs": {
+            "text": query
+        }
+    }
+)
+
+print(results)
+
+# Print the results
+for hit in results["result"]["hits"]:
+    print(f"id: {hit['id']:<5} | score: {round(hit['score'], 2):<5} | category: {hit['fields']['category']:<10} | text: {hit['fields']['chunk_text']:<50}")
+
+
